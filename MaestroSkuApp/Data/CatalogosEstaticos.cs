@@ -9,7 +9,7 @@
             "Reactivación"
         };
 
-        public static readonly List<string> ProductoSustito = new()
+        public static readonly List<string> ProductoSustituto = new()
         {
             "Producto Sustituto",
             "Producto No Sustituto"
@@ -50,7 +50,7 @@
             "Frutas y Verduras"
         };
 
-        public static readonly List<string> PaisOrigen = new()
+        public static readonly List<string> PaisesOrigen = new()
         {
             "Costa Rica",
             "China",

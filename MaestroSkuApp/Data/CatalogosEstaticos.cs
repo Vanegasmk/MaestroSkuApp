@@ -12,7 +12,7 @@
         public static readonly List<string> ProductoSustituto = new()
         {
             "Producto Sustituto",
-            "Producto No Sustituto"
+            "Producto No sustituto"
         };
 
         public static readonly List<string> Materiales = new()

@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="MaestroSkuApp.Tests/MaestroSkuApp.Tests.csproj" Id="b4137309-f95c-4307-a4d6-f3a85a5ad7c0" />
   <Project Path="MaestroSkuApp/MaestroSkuApp.csproj" />
 </Solution>

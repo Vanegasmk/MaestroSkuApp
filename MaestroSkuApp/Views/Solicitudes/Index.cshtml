@@ -1,0 +1,122 @@
+﻿@model IEnumerable<MaestroSkuApp.Models.SolicitudSku>
+
+@{
+    ViewData["Title"] = "Base Consolidada - Solicitudes SKU";
+    string estadoActual = ViewBag.EstadoFiltro as string ?? "";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-0">Base Consolidada de Solicitudes</h2>
+            <small class="text-muted">Registro único por solicitud: Etapa 1 crea (Pendiente Etapa 2) y Etapa 2 actualiza el mismo ID (Completado).</small>
+        </div>
+        <a asp-action="CrearEtapa1" class="btn btn-primary">+ Nueva Solicitud</a>
+    </div>
+
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Filtro rápido por estado -->
+    <form method="get" asp-action="Index" class="row g-2 mb-3">
+        <div class="col-md-4">
+            <select name="estadoFiltro" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Todos los estados --</option>
+                <option value="Pendiente Etapa 2" selected="@(estadoActual == "Pendiente Etapa 2")">Pendiente Etapa 2</option>
+                <option value="Completado" selected="@(estadoActual == "Completado")">Completado</option>
+            </select>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Estado</th>
+                    <th>Motivo / Categoría</th>
+                    <th>Clasificación / Planificado</th>
+                    <th>Jerarquía (Depto / Tipo)</th>
+                    <th>Creado por / Fecha</th>
+                    <th>Completado por / Fecha</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No hay solicitudes registradas aún. Haz clic en <strong>+ Nueva Solicitud</strong> para iniciar.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td><strong>#@item.Id</strong></td>
+                            <td>
+                                @if (item.Estado == "Completado")
+                                {
+                                    <span class="badge bg-success">Completado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Pendiente Etapa 2</span>
+                                }
+                            </td>
+                            <td>
+                                <div><strong>@item.Motivo</strong></div>
+                                <small class="text-muted">@item.CategoriaMotivo</small>
+                            </td>
+                            <td>
+                                <div>@item.Clasificacion</div>
+                                <small class="text-muted">@item.ProductoPlanificado</small>
+                            </td>
+                            <td>
+                                <div>@item.Departamento</div>
+                                <small class="text-muted">@item.Tipo</small>
+                            </td>
+                            <td>
+                                <div>@item.CreadoPor</div>
+                                <small class="text-muted">@item.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</small>
+                            </td>
+                            <td>
+                                @if (item.Estado == "Completado")
+                                {
+                                    <div>@(item.CompletadoPor ?? "Usuario 2")</div>
+                                    <small class="text-muted">@item.FechaFinalizacion?.ToString("dd/MM/yyyy HH:mm")</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.Estado != "Completado")
+                                {
+                                    <a asp-action="CompletarEtapa2" asp-route-id="@item.Id" class="btn btn-sm btn-warning">
+                                        Completar Etapa 2
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a asp-action="CompletarEtapa2" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">
+                                        Ver / Editar Etapa 2
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

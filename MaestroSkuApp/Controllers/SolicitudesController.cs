@@ -15,12 +15,11 @@ namespace MaestroSkuApp.Controllers
         }
 
         // BASE CONSOLIDADA (Pantalla principal: muestra pendientes y completados)
-
         public async Task<IActionResult> Index(string? estadoFiltro)
         {
             var query = _context.SolicitudesSku.AsQueryable();
 
-            if(!string.IsNullOrEmpty(estadoFiltro))
+            if (!string.IsNullOrEmpty(estadoFiltro))
             {
                 query = query.Where(s => s.Estado == estadoFiltro);
             }
@@ -34,7 +33,6 @@ namespace MaestroSkuApp.Controllers
         }
 
         // ETAPA 1 - MOSTRAR FORMULARIO DE CREACIÓN
-
         public IActionResult CrearEtapa1()
         {
             CargarCatalogosEnViewBag();
@@ -81,28 +79,26 @@ namespace MaestroSkuApp.Controllers
         }
 
         // ETAPA 2 - CARGAR SOLICITUD EXISTENTE POR ID PARA COMPLETARLA
-
         public async Task<IActionResult> CompletarEtapa2(int id)
         {
             var solicitud = await _context.SolicitudesSku.FindAsync(id);
 
-            if(solicitud == null)
+            if (solicitud == null)
             {
                 return NotFound();
             }
 
             CargarCatalogosEnViewBag(solicitud);
 
-            if(string.IsNullOrWhiteSpace(solicitud.CompletadoPor))
+            if (string.IsNullOrWhiteSpace(solicitud.CompletadoPor))
             {
                 solicitud.CompletadoPor = "Usuario 2"; // Valor predeterminado para la prueba
             }
-            
+
             return View(solicitud);
         }
 
         // ETAPA 2 - ACTUALIZAR EL MISMO REGISTRO (MISMO ID) A "COMPLETADO"
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> CompletarEtapa2(int id, SolicitudSku entrada)
@@ -114,7 +110,7 @@ namespace MaestroSkuApp.Controllers
 
             // Busca el registro original en SQLite para actualizarlo sin duplicar filas
             var solicitudDb = await _context.SolicitudesSku.FindAsync(id);
-            if(solicitudDb == null)
+            if (solicitudDb == null)
             {
                 return NotFound();
             }
@@ -152,8 +148,36 @@ namespace MaestroSkuApp.Controllers
 
             solicitudDb.CompletadoPor = string.IsNullOrWhiteSpace(entrada.CompletadoPor) ? "Usuario 2" : entrada.CompletadoPor.Trim();
 
-            // Limpia campos condicionales de Etapa 2 que no correspondan y valida
+            // Limpia campos condicionales de Etapa 2 que no correspondan y quita errores de campos de Etapa 1
             LimpiarCamposEtapa2(solicitudDb);
+
+            var camposEtapa1 = new[]
+            {
+                nameof(SolicitudSku.Motivo),
+                nameof(SolicitudSku.CategoriaMotivo),
+                nameof(SolicitudSku.Material),
+                nameof(SolicitudSku.Marca),
+                nameof(SolicitudSku.Clasificacion),
+                nameof(SolicitudSku.Temporada),
+                nameof(SolicitudSku.ProductoPlanificado),
+                nameof(SolicitudSku.Departamento),
+                nameof(SolicitudSku.Categoria),
+                nameof(SolicitudSku.Subcategoria),
+                nameof(SolicitudSku.Tipo),
+                nameof(SolicitudSku.ProductoSustituto),
+                nameof(SolicitudSku.PrecioSugeridoSustituto),
+                nameof(SolicitudSku.SkuReferencia),
+                nameof(SolicitudSku.FactorEscalada),
+                nameof(SolicitudSku.PromedioVentaMensual),
+                nameof(SolicitudSku.CreadoPor),
+                nameof(SolicitudSku.Estado)
+            };
+
+            foreach (var campo in camposEtapa1)
+            {
+                ModelState.Remove(campo);
+            }
+
             ValidarReglasEtapa2(solicitudDb);
 
             if (!ModelState.IsValid)
@@ -173,16 +197,34 @@ namespace MaestroSkuApp.Controllers
         }
 
         // ENDPOINTS JSON PARA FILTROS EN CASCADA (MOTIVO Y JERARQUÍA)
-
         [HttpGet]
         public async Task<IActionResult> ObtenerCategoriasMotivo(string motivo)
         {
             if (string.IsNullOrWhiteSpace(motivo))
                 return Json(Array.Empty<string>());
 
+            string normalizado = motivo.Trim().ToUpperInvariant();
+
             var categorias = await _context.CatalogoMotivos
-                .Where(m => m.Motivo == motivo)
+                .Where(m => m.Motivo.ToUpper() == normalizado)
                 .Select(m => m.CategoriaMotivo)
+                .Distinct()
+                .ToListAsync();
+
+            return Json(categorias);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ObtenerCategoriasJerarquia(string departamento)
+        {
+            if (string.IsNullOrWhiteSpace(departamento))
+                return Json(Array.Empty<string>());
+
+            string deptoNorm = departamento.Trim().ToUpperInvariant();
+
+            var categorias = await _context.CatalogoJerarquias
+                .Where(j => j.Departamento.ToUpper() == deptoNorm)
+                .Select(j => j.Categoria)
                 .Distinct()
                 .ToListAsync();
 
@@ -195,8 +237,11 @@ namespace MaestroSkuApp.Controllers
             if (string.IsNullOrWhiteSpace(departamento) || string.IsNullOrWhiteSpace(categoria))
                 return Json(Array.Empty<string>());
 
+            string deptoNorm = departamento.Trim().ToUpperInvariant();
+            string catNorm = categoria.Trim().ToUpperInvariant();
+
             var subcategorias = await _context.CatalogoJerarquias
-                .Where(j => j.Departamento == departamento && j.Categoria == categoria)
+                .Where(j => j.Departamento.ToUpper() == deptoNorm && j.Categoria.ToUpper() == catNorm)
                 .Select(j => j.Subcategoria)
                 .Distinct()
                 .ToListAsync();
@@ -210,8 +255,14 @@ namespace MaestroSkuApp.Controllers
             if (string.IsNullOrWhiteSpace(departamento) || string.IsNullOrWhiteSpace(categoria) || string.IsNullOrWhiteSpace(subcategoria))
                 return Json(Array.Empty<string>());
 
+            string deptoNorm = departamento.Trim().ToUpperInvariant();
+            string catNorm = categoria.Trim().ToUpperInvariant();
+            string subNorm = subcategoria.Trim().ToUpperInvariant();
+
             var tipos = await _context.CatalogoJerarquias
-                .Where(j => j.Departamento == departamento && j.Categoria == categoria && j.Subcategoria == subcategoria)
+                .Where(j => j.Departamento.ToUpper() == deptoNorm
+                         && j.Categoria.ToUpper() == catNorm
+                         && j.Subcategoria.ToUpper() == subNorm)
                 .Select(j => j.Tipo)
                 .Distinct()
                 .ToListAsync();
@@ -219,8 +270,7 @@ namespace MaestroSkuApp.Controllers
             return Json(tipos);
         }
 
-        //REGLAS DE NEGOCIO, LIMPIEZA Y VALIDACIONES EN SERVIDOR
-
+        // REGLAS DE NEGOCIO, LIMPIEZA Y VALIDACIONES EN SERVIDOR
         private void AplicarReglasEtapa1(SolicitudSku s)
         {
             // Cálculo automático de ProductoPlanificado según Clasificación
@@ -394,7 +444,6 @@ namespace MaestroSkuApp.Controllers
             if (!peso.HasValue || peso.Value <= 0)
                 ModelState.AddModelError($"Caja{numeroCaja}PesoKg", $"Caja {numeroCaja}: el Peso (kg) debe ser mayor a 0.");
         }
-
 
         private void CargarCatalogosEnViewBag(SolicitudSku? actual = null)
         {

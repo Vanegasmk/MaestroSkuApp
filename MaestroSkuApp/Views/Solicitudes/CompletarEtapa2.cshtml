@@ -1,0 +1,393 @@
+﻿@model MaestroSkuApp.Models.SolicitudSku
+
+@{
+    ViewData["Title"] = $"Completar Etapa 2 - Solicitud #{Model.Id}";
+}
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h3 class="fw-bold mb-1">Etapa 2 — Completar Solicitud #@Model.Id</h3>
+            <p class="text-muted mb-0">
+                Estado actual: <span class="badge bg-warning text-dark">@Model.Estado</span>
+                · Creado por: <strong>@Model.CreadoPor</strong> (@Model.FechaCreacion.ToString("dd/MM/yyyy HH:mm"))
+            </p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">Volver a Base Consolidada</a>
+    </div>
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <!-- RESUMEN DE ETAPA 1 (SOLO LECTURA) -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light fw-bold">
+            Resumen de Etapa 1 (Registro #@Model.Id)
+        </div>
+        <div class="card-body">
+            <div class="row g-3 small">
+                <div class="col-md-3">
+                    <span class="text-muted d-block">Motivo / Categoría</span>
+                    <strong>@Model.Motivo</strong> — @Model.CategoriaMotivo
+                </div>
+                <div class="col-md-3">
+                    <span class="text-muted d-block">Tipo de Producto</span>
+                    <strong>@Model.ProductoSustituto</strong>
+                </div>
+                <div class="col-md-3">
+                    <span class="text-muted d-block">Material / Marca</span>
+                    @Model.Material · @Model.Marca
+                </div>
+                <div class="col-md-3">
+                    <span class="text-muted d-block">Clasificación / Planificado</span>
+                    @Model.Clasificacion @(string.IsNullOrWhiteSpace(Model.Temporada) ? "" : $"({Model.Temporada})") · <strong>@Model.ProductoPlanificado</strong>
+                </div>
+                <div class="col-md-12">
+                    <span class="text-muted d-block">Jerarquía RELEX</span>
+                    <strong>@Model.Departamento / @Model.Categoria / @Model.Subcategoria / @Model.Tipo</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FORMULARIO ETAPA 2 -->
+    <form asp-action="CompletarEtapa2" asp-route-id="@Model.Id" method="post" id="formEtapa2">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        <!-- TRAZABILIDAD DE USUARIO -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="CompletadoPor" class="form-label fw-semibold">Completado Por</label>
+                        <input asp-for="CompletadoPor" class="form-control bg-light text-muted" readonly />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORIGEN Y REGISTRO SANITARIO -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                Origen y Registro Sanitario
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="PaisOrigen" class="form-label fw-semibold">12. País de origen *</label>
+                        <select asp-for="PaisOrigen" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="Costa Rica">Costa Rica</option>
+                            <option value="China">China</option>
+                            <option value="Estados Unidos">Estados Unidos</option>
+                            <option value="México">México</option>
+                            <option value="Guatemala">Guatemala</option>
+                        </select>
+                        <span asp-validation-for="PaisOrigen" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="RequiereRegistroSanitario" class="form-label fw-semibold">13. ¿Requiere registro sanitario? *</label>
+                        <select asp-for="RequiereRegistroSanitario" id="RequiereRegistroSanitario" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="YES/SI">YES/SI</option>
+                            <option value="NO">NO</option>
+                        </select>
+                        <span asp-validation-for="RequiereRegistroSanitario" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div id="bloque-registro-sanitario" class="row g-3 mt-1 pt-3 border-top" style="display:none;">
+                    <div class="col-md-4">
+                        <label asp-for="NumeroRegistroSanitario" class="form-label fw-semibold">Número de registro sanitario *</label>
+                        <input asp-for="NumeroRegistroSanitario" class="form-control campo-rs" placeholder="Ej. RS-CR-12345-2026" />
+                        <span asp-validation-for="NumeroRegistroSanitario" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="FechaEmisionRegistro" class="form-label fw-semibold">Fecha de emisión *</label>
+                        <input asp-for="FechaEmisionRegistro" type="date" class="form-control campo-rs" />
+                        <span asp-validation-for="FechaEmisionRegistro" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="FechaVencimientoRegistro" class="form-label fw-semibold">Fecha de vencimiento *</label>
+                        <input asp-for="FechaVencimientoRegistro" type="date" class="form-control campo-rs" />
+                        <span asp-validation-for="FechaVencimientoRegistro" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EMBALAJE Y APILADO -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                14. Embalaje
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="Embalaje" class="form-label fw-semibold">Tipo de embalaje *</label>
+                        <select asp-for="Embalaje" id="Embalaje" class="form-select">
+                            <option value="">-- Seleccione --</option>
+                            <option value="Nested / Anidado">Nested / Anidado</option>
+                            <option value="Stacked / Apilado">Stacked / Apilado</option>
+                            <option value="Master Carton Multiple">Master Carton Multiple</option>
+                            <option value="Master Carton">Master Carton</option>
+                        </select>
+                        <span asp-validation-for="Embalaje" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <div id="bloque-apilado" class="row g-3 mt-1 pt-3 border-top" style="display:none;">
+                    <div class="col-md-6">
+                        <label asp-for="AltoApilado" class="form-label fw-semibold">Alto apilado *</label>
+                        <input asp-for="AltoApilado" type="number" step="0.01" min="0.01" class="form-control campo-apilado" />
+                        <span asp-validation-for="AltoApilado" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="UnidadesPorApilado" class="form-label fw-semibold">Unidades por apilado *</label>
+                        <input asp-for="UnidadesPorApilado" type="number" step="1" min="1" class="form-control campo-apilado" />
+                        <span asp-validation-for="UnidadesPorApilado" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 15. CANTIDAD DE CAJAS, DIMENSIONES Y PESO -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+                <h6 class="mb-0 fw-bold" id="titulo-seccion-cajas">
+                    15. Cantidad de Cajas, Dimensiones (cm) y Peso (kg)
+                </h6>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="selectorUnidadCajas" class="form-label mb-0 small text-muted fw-semibold">
+                        Unidad al ingresar:
+                    </label>
+                    <select id="selectorUnidadCajas" class="form-select form-select-sm w-auto">
+                        <option value="Metric" selected>Centímetros (cm) y Kilogramos (kg)</option>
+                        <option value="Imperial">Pulgadas (in) y Libras (lb) → convertir a cm/kg</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label asp-for="CantidadCajas" class="form-label fw-semibold">Cantidad de Cajas (1 a 3) *</label>
+                        <select asp-for="CantidadCajas" id="CantidadCajas" class="form-select">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                        <span asp-validation-for="CantidadCajas" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <!-- CAJA 1 -->
+                <div id="bloque-caja-1" class="border rounded p-3 mb-3 bg-light">
+                    <h6 class="fw-bold mb-3" data-caja-titulo="1">Caja 1 (cm / kg)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label asp-for="Caja1ProfundoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Profundo">Profundo (cm)</label>
+                            <input asp-for="Caja1ProfundoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja1ProfundoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja1AnchoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Ancho">Ancho (cm)</label>
+                            <input asp-for="Caja1AnchoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja1AnchoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja1AltoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Alto">Alto (cm)</label>
+                            <input asp-for="Caja1AltoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja1AltoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja1PesoKg" class="form-label fw-semibold" data-unidad-tipo="peso" data-label-base="Peso">Peso (kg)</label>
+                            <input asp-for="Caja1PesoKg" type="number" step="0.01" min="0.01" class="form-control input-caja-peso" />
+                            <span asp-validation-for="Caja1PesoKg" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAJA 2 -->
+                <div id="bloque-caja-2" class="border rounded p-3 mb-3 bg-light" style="display:none;">
+                    <h6 class="fw-bold mb-3" data-caja-titulo="2">Caja 2 (cm / kg)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label asp-for="Caja2ProfundoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Profundo">Profundo (cm)</label>
+                            <input asp-for="Caja2ProfundoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja2ProfundoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja2AnchoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Ancho">Ancho (cm)</label>
+                            <input asp-for="Caja2AnchoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja2AnchoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja2AltoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Alto">Alto (cm)</label>
+                            <input asp-for="Caja2AltoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja2AltoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja2PesoKg" class="form-label fw-semibold" data-unidad-tipo="peso" data-label-base="Peso">Peso (kg)</label>
+                            <input asp-for="Caja2PesoKg" type="number" step="0.01" min="0.01" class="form-control input-caja-peso" />
+                            <span asp-validation-for="Caja2PesoKg" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAJA 3 -->
+                <div id="bloque-caja-3" class="border rounded p-3 mb-0 bg-light" style="display:none;">
+                    <h6 class="fw-bold mb-3" data-caja-titulo="3">Caja 3 (cm / kg)</h6>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label asp-for="Caja3ProfundoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Profundo">Profundo (cm)</label>
+                            <input asp-for="Caja3ProfundoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja3ProfundoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja3AnchoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Ancho">Ancho (cm)</label>
+                            <input asp-for="Caja3AnchoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja3AnchoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja3AltoCm" class="form-label fw-semibold" data-unidad-tipo="dim" data-label-base="Alto">Alto (cm)</label>
+                            <input asp-for="Caja3AltoCm" type="number" step="0.01" min="0.01" class="form-control input-caja-dim" />
+                            <span asp-validation-for="Caja3AltoCm" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Caja3PesoKg" class="form-label fw-semibold" data-unidad-tipo="peso" data-label-base="Peso">Peso (kg)</label>
+                            <input asp-for="Caja3PesoKg" type="number" step="0.01" min="0.01" class="form-control input-caja-peso" />
+                            <span asp-validation-for="Caja3PesoKg" class="text-danger small"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-danger px-4">Guardar</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const selectRs = document.getElementById("RequiereRegistroSanitario");
+            const bloqueRs = document.getElementById("bloque-registro-sanitario");
+
+            const selectEmbalaje = document.getElementById("Embalaje");
+            const bloqueApilado = document.getElementById("bloque-apilado");
+
+            const selectorUnidad = document.getElementById("selectorUnidadCajas");
+            const tituloSeccion = document.getElementById("titulo-seccion-cajas");
+            const selectCantidad = document.getElementById("CantidadCajas");
+            const formulario = document.getElementById("formEtapa2");
+
+            function actualizarRegistroSanitario() {
+                if (!selectRs || !bloqueRs) return;
+                const mostrar = selectRs.value === "YES/SI";
+                bloqueRs.style.display = mostrar ? "flex" : "none";
+                if (!mostrar) {
+                    bloqueRs.querySelectorAll(".campo-rs").forEach(i => i.value = "");
+                }
+            }
+
+            function actualizarApilado() {
+                if (!selectEmbalaje || !bloqueApilado) return;
+                const mostrar = selectEmbalaje.value === "Stacked / Apilado";
+                bloqueApilado.style.display = mostrar ? "flex" : "none";
+                if (!mostrar) {
+                    bloqueApilado.querySelectorAll(".campo-apilado").forEach(i => i.value = "");
+                }
+            }
+
+            function actualizarVisibilidadCajas() {
+                if (!selectCantidad) return;
+                const cantidad = parseInt(selectCantidad.value, 10) || 1;
+                const caja2 = document.getElementById("bloque-caja-2");
+                const caja3 = document.getElementById("bloque-caja-3");
+
+                if (caja2) {
+                    caja2.style.display = cantidad >= 2 ? "block" : "none";
+                    if (cantidad < 2) caja2.querySelectorAll("input").forEach(i => i.value = "");
+                }
+                if (caja3) {
+                    caja3.style.display = cantidad === 3 ? "block" : "none";
+                    if (cantidad < 3) caja3.querySelectorAll("input").forEach(i => i.value = "");
+                }
+            }
+
+            function actualizarEtiquetasUnidades() {
+                if (!selectorUnidad) return;
+                const esImperial = selectorUnidad.value === "Imperial";
+
+                if (tituloSeccion) {
+                    tituloSeccion.textContent = esImperial
+                        ? "15. Cantidad de Cajas, Dimensiones (in → cm) y Peso (lb → kg)"
+                        : "15. Cantidad de Cajas, Dimensiones (cm) y Peso (kg)";
+                }
+
+                document.querySelectorAll("[data-caja-titulo]").forEach(el => {
+                    const num = el.getAttribute("data-caja-titulo");
+                    el.textContent = esImperial ? `Caja ${num} (in / lb)` : `Caja ${num} (cm / kg)`;
+                });
+
+                document.querySelectorAll("[data-unidad-tipo]").forEach(el => {
+                    const tipo = el.getAttribute("data-unidad-tipo");
+                    const base = el.getAttribute("data-label-base");
+                    if (tipo === "dim") {
+                        el.textContent = esImperial ? `${base} (in)` : `${base} (cm)`;
+                    } else if (tipo === "peso") {
+                        el.textContent = esImperial ? `${base} (lb)` : `${base} (kg)`;
+                    }
+                });
+            }
+
+            if (selectRs) {
+                selectRs.addEventListener("change", actualizarRegistroSanitario);
+                actualizarRegistroSanitario();
+            }
+
+            if (selectEmbalaje) {
+                selectEmbalaje.addEventListener("change", actualizarApilado);
+                actualizarApilado();
+            }
+
+            if (selectCantidad) {
+                selectCantidad.addEventListener("change", actualizarVisibilidadCajas);
+                actualizarVisibilidadCajas();
+            }
+
+            if (selectorUnidad) {
+                selectorUnidad.addEventListener("change", actualizarEtiquetasUnidades);
+                actualizarEtiquetasUnidades();
+            }
+
+            if (formulario && selectorUnidad) {
+                formulario.addEventListener("submit", function () {
+                    if (selectorUnidad.value !== "Imperial") return;
+
+                    document.querySelectorAll(".input-caja-dim").forEach(input => {
+                        const val = parseFloat(input.value.replace(",", "."));
+                        if (!isNaN(val) && val > 0) {
+                            input.value = (val * 2.54).toFixed(2);
+                        }
+                    });
+
+                    document.querySelectorAll(".input-caja-peso").forEach(input => {
+                        const val = parseFloat(input.value.replace(",", "."));
+                        if (!isNaN(val) && val > 0) {
+                            input.value = (val * 0.45359237).toFixed(2);
+                        }
+                    });
+
+                    selectorUnidad.value = "Metric";
+                });
+            }
+        })();
+    </script>
+}

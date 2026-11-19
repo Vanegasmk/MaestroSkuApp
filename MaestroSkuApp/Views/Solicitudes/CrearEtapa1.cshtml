@@ -1,0 +1,371 @@
+﻿@model MaestroSkuApp.Models.SolicitudSku
+
+@{
+    ViewData["Title"] = "Etapa 1 - Nueva Solicitud SKU";
+    var motivos = ViewBag.Motivos as List<string> ?? new();
+    var categoriasMotivo = ViewBag.CategoriasMotivo as List<string> ?? new();
+    var sustitutoOpciones = ViewBag.ProductoSustitutoOpciones as List<string> ?? new();
+    var materiales = ViewBag.Materiales as List<string> ?? new();
+    var marcas = ViewBag.Marcas as List<string> ?? new();
+    var clasificaciones = ViewBag.Clasificaciones as List<string> ?? new();
+    var temporadas = ViewBag.Temporadas as List<string> ?? new();
+    var departamentos = ViewBag.Departamentos as List<string> ?? new();
+    var categoriasJer = ViewBag.CategoriasJerarquia as List<string> ?? new();
+    var subcategoriasJer = ViewBag.SubcategoriasJerarquia as List<string> ?? new();
+    var tiposJer = ViewBag.TiposJerarquia as List<string> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">Etapa 1: Registro Inicial de Solicitud SKU</h2>
+        <p class="text-muted mb-0 small">
+            Al guardar, la solicitud quedará en la Base Consolidada con estado
+            <span class="badge bg-warning">Pendiente Etapa 2</span>.
+        </p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">← Volver a Base Consolidada</a>
+</div>
+
+<form asp-action="CrearEtapa1" method="post" id="formEtapa1">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger rounded-3"></div>
+
+    <!-- Control y datos generales -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Control y Datos Generales</span>
+            <span class="badge bg-warning">Etapa 1</span>
+        </div>
+        <div class="card-body row g-3">
+            <div class="col-md-4">
+                <label asp-for="CreadoPor" class="form-label fw-semibold">Creado Por</label>
+                <input asp-for="CreadoPor" class="form-control bg-light text-muted" readonly />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Motivo" class="form-label fw-semibold">1. Motivo *</label>
+                <select asp-for="Motivo" id="Motivo" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var m in motivos)
+                    {
+                        <option value="@m">@m</option>
+                    }
+                </select>
+                <span asp-validation-for="Motivo" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="CategoriaMotivo" class="form-label fw-semibold">2. Categoría Motivo *</label>
+                <select asp-for="CategoriaMotivo" id="CategoriaMotivo" class="form-select" data-selected="@Model.CategoriaMotivo">
+                    <option value="">-- Seleccione Motivo primero --</option>
+                    @foreach (var cm in categoriasMotivo)
+                    {
+                        <option value="@cm">@cm</option>
+                    }
+                </select>
+                <span asp-validation-for="CategoriaMotivo" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Material" class="form-label fw-semibold">4. Material *</label>
+                <select asp-for="Material" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var mat in materiales)
+                    {
+                        <option value="@mat">@mat</option>
+                    }
+                </select>
+                <span asp-validation-for="Material" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Marca" class="form-label fw-semibold">5. Marca *</label>
+                <select asp-for="Marca" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var marca in marcas)
+                    {
+                        <option value="@marca">@marca</option>
+                    }
+                </select>
+                <span asp-validation-for="Marca" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Clasificacion" class="form-label fw-semibold">6. Clasificación *</label>
+                <select asp-for="Clasificacion" id="Clasificacion" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var c in clasificaciones)
+                    {
+                        <option value="@c">@c</option>
+                    }
+                </select>
+                <span asp-validation-for="Clasificacion" class="text-danger small"></span>
+            </div>
+
+            <!-- Condicional: Temporada solo cuando Clasificación == "Temporada" -->
+            <div class="col-md-4" id="grupoTemporada" style="display:none;">
+                <label asp-for="Temporada" class="form-label fw-semibold">7. Temporada *</label>
+                <select asp-for="Temporada" id="Temporada" class="form-select">
+                    <option value="">-- Seleccione temporada --</option>
+                    @foreach (var t in temporadas)
+                    {
+                        <option value="@t">@t</option>
+                    }
+                </select>
+                <span asp-validation-for="Temporada" class="text-danger small"></span>
+            </div>
+
+            <!-- Cálculo automático: Producto Planificado -->
+            <div class="col-md-4">
+                <label asp-for="ProductoPlanificado" class="form-label fw-semibold">Producto Planificado (Automático)</label>
+                <input asp-for="ProductoPlanificado" id="ProductoPlanificado" class="form-control bg-light fw-semibold" readonly />
+            </div>
+        </div>
+    </div>
+
+    <!-- Jerarquía en cascada (4 niveles) -->
+    <div class="card mb-4">
+        <div class="card-header">Jerarquía de Producto (Cascada)</div>
+        <div class="card-body row g-3">
+            <div class="col-md-3">
+                <label asp-for="Departamento" class="form-label fw-semibold">8. Departamento *</label>
+                <select asp-for="Departamento" id="Departamento" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var d in departamentos)
+                    {
+                        <option value="@d">@d</option>
+                    }
+                </select>
+                <span asp-validation-for="Departamento" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="Categoria" class="form-label fw-semibold">9. Categoría *</label>
+                <select asp-for="Categoria" id="Categoria" class="form-select" data-selected="@Model.Categoria">
+                    <option value="">-- Seleccione Departamento --</option>
+                    @foreach (var cat in categoriasJer)
+                    {
+                        <option value="@cat">@cat</option>
+                    }
+                </select>
+                <span asp-validation-for="Categoria" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="Subcategoria" class="form-label fw-semibold">10. Subcategoría *</label>
+                <select asp-for="Subcategoria" id="Subcategoria" class="form-select" data-selected="@Model.Subcategoria">
+                    <option value="">-- Seleccione Categoría --</option>
+                    @foreach (var sub in subcategoriasJer)
+                    {
+                        <option value="@sub">@sub</option>
+                    }
+                </select>
+                <span asp-validation-for="Subcategoria" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="Tipo" class="form-label fw-semibold">11. Tipo *</label>
+                <select asp-for="Tipo" id="Tipo" class="form-select" data-selected="@Model.Tipo">
+                    <option value="">-- Seleccione Subcategoría --</option>
+                    @foreach (var tipo in tiposJer)
+                    {
+                        <option value="@tipo">@tipo</option>
+                    }
+                </select>
+                <span asp-validation-for="Tipo" class="text-danger small"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Condicional: Sustituto vs No Sustituto -->
+    <div class="card mb-4">
+        <div class="card-header">3. Condición de Producto Sustituto</div>
+        <div class="card-body row g-3">
+            <div class="col-md-4">
+                <label asp-for="ProductoSustituto" class="form-label fw-semibold">¿Es Producto Sustituto? *</label>
+                <select asp-for="ProductoSustituto" id="ProductoSustituto" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var op in sustitutoOpciones)
+                    {
+                        <option value="@op">@op</option>
+                    }
+                </select>
+                <span asp-validation-for="ProductoSustituto" class="text-danger small"></span>
+            </div>
+
+            <div id="bloqueSustituto" class="row g-3 mt-1" style="display:none;">
+                <div class="col-md-4">
+                    <label asp-for="PrecioSugeridoSustituto" class="form-label fw-semibold">Precio Sugerido Sustituto *</label>
+                    <input asp-for="PrecioSugeridoSustituto" id="PrecioSugeridoSustituto" type="number" step="0.01" class="form-control" />
+                    <span asp-validation-for="PrecioSugeridoSustituto" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="SkuReferencia" class="form-label fw-semibold">SKU Referencia *</label>
+                    <input asp-for="SkuReferencia" id="SkuReferencia" class="form-control" />
+                    <span asp-validation-for="SkuReferencia" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="FactorEscalada" class="form-label fw-semibold">Factor Escalada *</label>
+                    <input asp-for="FactorEscalada" id="FactorEscalada" type="number" step="0.01" class="form-control" />
+                    <span asp-validation-for="FactorEscalada" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div id="bloqueNoSustituto" class="row g-3 mt-1" style="display:none;">
+                <div class="col-md-4">
+                    <label asp-for="PromedioVentaMensual" class="form-label fw-semibold">Promedio Venta Mensual *</label>
+                    <input asp-for="PromedioVentaMensual" id="PromedioVentaMensual" type="number" step="1" class="form-control" />
+                    <span asp-validation-for="PromedioVentaMensual" class="text-danger small"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-success px-4">Guardar Etapa 1</button>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        function llenarSelect(selectEl, items, placeholder, valorSeleccionado = "") {
+            selectEl.innerHTML = `<option value="">${placeholder}</option>`;
+            for (const item of items) {
+                const opt = document.createElement("option");
+                opt.value = item;
+                opt.textContent = item;
+                if (valorSeleccionado && valorSeleccionado === item) {
+                    opt.selected = true;
+                }
+                selectEl.appendChild(opt);
+            }
+        }
+
+        async function cargarCategoriasMotivo(valorSeleccionado = "") {
+            const motivo = document.getElementById("Motivo").value;
+            const catMotivoEl = document.getElementById("CategoriaMotivo");
+            if (!motivo) {
+                llenarSelect(catMotivoEl, [], "-- Seleccione Motivo primero --");
+                return;
+            }
+            const resp = await fetch(`/Solicitudes/ObtenerCategoriasMotivo?motivo=${encodeURIComponent(motivo)}`);
+            const data = await resp.json();
+            llenarSelect(catMotivoEl, data, "-- Seleccione Categoría motivo --", valorSeleccionado);
+        }
+
+        async function cargarCategoriasJerarquia(selCat = "", selSub = "", selTipo = "") {
+            const depto = document.getElementById("Departamento").value;
+            const catEl = document.getElementById("Categoria");
+            const subEl = document.getElementById("Subcategoria");
+            const tipoEl = document.getElementById("Tipo");
+
+            llenarSelect(subEl, [], "-- Seleccione Categoría --");
+            llenarSelect(tipoEl, [], "-- Seleccione Subcategoría --");
+
+            if (!depto) {
+                llenarSelect(catEl, [], "-- Seleccione Departamento --");
+                return;
+            }
+            const resp = await fetch(`/Solicitudes/ObtenerCategoriasJerarquia?departamento=${encodeURIComponent(depto)}`);
+            const data = await resp.json();
+            llenarSelect(catEl, data, "-- Seleccione Categoría --", selCat);
+            if (selCat) {
+                await cargarSubcategoriasJerarquia(selSub, selTipo);
+            }
+        }
+
+        async function cargarSubcategoriasJerarquia(selSub = "", selTipo = "") {
+            const depto = document.getElementById("Departamento").value;
+            const cat = document.getElementById("Categoria").value;
+            const subEl = document.getElementById("Subcategoria");
+            const tipoEl = document.getElementById("Tipo");
+
+            llenarSelect(tipoEl, [], "-- Seleccione Subcategoría --");
+
+            if (!depto || !cat) return;
+            const resp = await fetch(`/Solicitudes/ObtenerSubcategoriasJerarquia?departamento=${encodeURIComponent(depto)}&categoria=${encodeURIComponent(cat)}`);
+            const data = await resp.json();
+            llenarSelect(subEl, data, "-- Seleccione Subcategoría --", selSub);
+            if (selSub) {
+                await cargarTiposJerarquia(selTipo);
+            }
+        }
+
+        async function cargarTiposJerarquia(selTipo = "") {
+            const depto = document.getElementById("Departamento").value;
+            const cat = document.getElementById("Categoria").value;
+            const sub = document.getElementById("Subcategoria").value;
+            const tipoEl = document.getElementById("Tipo");
+
+            if (!depto || !cat || !sub) {
+                llenarSelect(tipoEl, [], "-- Seleccione Subcategoría --");
+                return;
+            }
+            const resp = await fetch(`/Solicitudes/ObtenerTiposJerarquia?departamento=${encodeURIComponent(depto)}&categoria=${encodeURIComponent(cat)}&subcategoria=${encodeURIComponent(sub)}`);
+            const data = await resp.json();
+            llenarSelect(tipoEl, data, "-- Seleccione Tipo --", selTipo);
+        }
+
+        function actualizarClasificacion() {
+            const clasif = document.getElementById("Clasificacion").value;
+            const planificadoEl = document.getElementById("ProductoPlanificado");
+            const grupoTemp = document.getElementById("grupoTemporada");
+            const tempEl = document.getElementById("Temporada");
+
+            planificadoEl.value = clasif === "Stocks" ? "No planificado" : "Planificado";
+
+            if (clasif === "Temporada") {
+                grupoTemp.style.display = "block";
+            } else {
+                grupoTemp.style.display = "none";
+                tempEl.value = "";
+            }
+        }
+
+        function actualizarSustituto() {
+            const valor = document.getElementById("ProductoSustituto").value;
+            const bloqueSust = document.getElementById("bloqueSustituto");
+            const bloqueNoSust = document.getElementById("bloqueNoSustituto");
+
+            if (valor === "Producto Sustituto") {
+                bloqueSust.style.display = "flex";
+                bloqueNoSust.style.display = "none";
+                document.getElementById("PromedioVentaMensual").value = "";
+            } else if (valor === "Producto No sustituto") {
+                bloqueSust.style.display = "none";
+                bloqueNoSust.style.display = "flex";
+                document.getElementById("PrecioSugeridoSustituto").value = "";
+                document.getElementById("SkuReferencia").value = "";
+                document.getElementById("FactorEscalada").value = "";
+            } else {
+                bloqueSust.style.display = "none";
+                bloqueNoSust.style.display = "none";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            document.getElementById("Motivo").addEventListener("change", () => cargarCategoriasMotivo());
+            document.getElementById("Departamento").addEventListener("change", () => cargarCategoriasJerarquia());
+            document.getElementById("Categoria").addEventListener("change", () => cargarSubcategoriasJerarquia());
+            document.getElementById("Subcategoria").addEventListener("change", () => cargarTiposJerarquia());
+            document.getElementById("Clasificacion").addEventListener("change", actualizarClasificacion);
+            document.getElementById("ProductoSustituto").addEventListener("change", actualizarSustituto);
+
+            actualizarClasificacion();
+            actualizarSustituto();
+
+            const catMotivoSel = document.getElementById("CategoriaMotivo").dataset.selected;
+            if (document.getElementById("Motivo").value && catMotivoSel) {
+                await cargarCategoriasMotivo(catMotivoSel);
+            }
+
+            const catSel = document.getElementById("Categoria").dataset.selected;
+            const subSel = document.getElementById("Subcategoria").dataset.selected;
+            const tipoSel = document.getElementById("Tipo").dataset.selected;
+            if (document.getElementById("Departamento").value && catSel) {
+                await cargarCategoriasJerarquia(catSel, subSel, tipoSel);
+            }
+        });
+    </script>
+}
